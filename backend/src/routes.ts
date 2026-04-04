@@ -258,6 +258,14 @@ router.post('/contracts', requireWriter, async (req: AuthRequest, res: Response)
       return;
     }
 
+    if (req.body.parent_contract_id) {
+      const parentContract = await contractRepo.findById(req.body.parent_contract_id);
+      if (!parentContract) {
+        res.status(400).json({ error: { field: 'parent_contract_id', message: 'Parent contract not found' } });
+        return;
+      }
+    }
+
     const now = new Date().toISOString();
     const contract: Contract = {
       id: randomUUID(),
@@ -270,15 +278,32 @@ router.post('/contracts', requireWriter, async (req: AuthRequest, res: Response)
       external_reference_id: req.body.external_reference_id,
       contract_type: req.body.contract_type,
       description: req.body.description,
+      parent_contract_id: req.body.parent_contract_id,
       effective_date: req.body.effective_date,
       signature_date: req.body.signature_date,
       initial_term_months: req.body.initial_term_months,
-      auto_renew: req.body.auto_renew || false,
+      auto_renew: req.body.auto_renew ?? false,
       renewal_term_months: req.body.renewal_term_months,
       notice_period_days: req.body.notice_period_days,
+      termination_date: req.body.termination_date,
       contract_value: req.body.contract_value,
       currency: req.body.currency,
+      billing_frequency: req.body.billing_frequency,
+      payment_terms: req.body.payment_terms,
+      cost_center_code: req.body.cost_center_code,
+      spend_category: req.body.spend_category,
+      price_escalation_terms: req.body.price_escalation_terms,
       risk_tier: req.body.risk_tier,
+      data_classification: req.body.data_classification,
+      insurance_required: req.body.insurance_required ?? false,
+      soc2_required: req.body.soc2_required ?? false,
+      dpa_required: req.body.dpa_required ?? false,
+      compliance_exceptions: req.body.compliance_exceptions,
+      regulatory_tags: req.body.regulatory_tags,
+      key_obligations: req.body.key_obligations,
+      sla_terms: req.body.sla_terms,
+      service_credits_terms: req.body.service_credits_terms,
+      audit_rights_flag: req.body.audit_rights_flag ?? false,
       notes: req.body.notes,
       archived: false,
       created_at: now,
@@ -337,6 +362,25 @@ router.patch('/contracts/:id', requireWriter, async (req: AuthRequest, res: Resp
     if (!validation.isValid()) {
       res.status(400).json(validation.toResponse());
       return;
+    }
+
+    const vendor = await vendorRepo.findById(updated.vendor_id);
+    if (!vendor) {
+      res.status(400).json({ error: { field: 'vendor_id', message: 'Vendor not found' } });
+      return;
+    }
+
+    if (updated.parent_contract_id) {
+      if (updated.parent_contract_id === contract.id) {
+        res.status(400).json({ error: { field: 'parent_contract_id', message: 'Contract cannot reference itself as parent' } });
+        return;
+      }
+
+      const parentContract = await contractRepo.findById(updated.parent_contract_id);
+      if (!parentContract) {
+        res.status(400).json({ error: { field: 'parent_contract_id', message: 'Parent contract not found' } });
+        return;
+      }
     }
 
     await contractRepo.update(updated);

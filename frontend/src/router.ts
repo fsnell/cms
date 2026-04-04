@@ -41,6 +41,11 @@ const routes: Array<RouteRecordRaw> = [
     props: { id: null }
   },
   {
+    path: '/vendors/:id/edit',
+    name: 'EditVendor',
+    component: () => import('./components/VendorForm.vue')
+  },
+  {
     path: '/vendors/:id',
     name: 'ViewVendor',
     component: () => import('./components/VendorDetail.vue')

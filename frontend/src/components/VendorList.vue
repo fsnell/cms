@@ -42,7 +42,7 @@
                       <v-btn icon="mdi-dots-vertical" variant="text" size="small" v-bind="props" />
                     </template>
                     <v-list>
-                      <v-list-item :to="`/vendors/${vendor.id}`">
+                      <v-list-item :to="`/vendors/${vendor.id}/edit`">
                         <v-list-item-title>Edit</v-list-item-title>
                       </v-list-item>
                       <v-list-item v-if="isAdmin" @click="handleDelete(vendor)">

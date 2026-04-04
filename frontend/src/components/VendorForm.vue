@@ -73,21 +73,36 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <v-alert v-if="error" type="error" class="mt-4">{{ error }}</v-alert>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { store } from '../stores/app';
+import { apiClient } from '../services/api';
+import type { RiskTier, Vendor } from '../../../backend/src/models';
 
 const router = useRouter();
 const route = useRoute();
 const id = route.params.id as string || null;
 
-const riskTierOptions = ['Low', 'Medium', 'High'];
+const riskTierOptions: RiskTier[] = ['Low', 'Medium', 'High'];
 
-const form = ref({
+type VendorFormState = Pick<Vendor,
+  'legal_name' |
+  'dba_name' |
+  'risk_tier' |
+  'category' |
+  'website' |
+  'primary_contact_name' |
+  'primary_contact_email' |
+  'primary_contact_phone'
+>;
+
+const form = ref<VendorFormState>({
   legal_name: '',
   dba_name: '',
   risk_tier: 'Medium',
@@ -98,6 +113,8 @@ const form = ref({
   primary_contact_phone: ''
 });
 
+const error = ref<string | null>(null);
+
 async function handleSubmit() {
   try {
     if (id) {
@@ -106,10 +123,33 @@ async function handleSubmit() {
       await store.createVendor(form.value);
     }
     router.push('/vendors');
-  } catch (err) {
-    console.error(err);
+  } catch (err: any) {
+    error.value = err.response?.data?.error?.message || err.message || 'Failed to save vendor';
   }
 }
+
+onMounted(async () => {
+  if (!id) {
+    return;
+  }
+
+  try {
+    const vendor = await apiClient.getVendor(id);
+    form.value = {
+      legal_name: vendor.legal_name || '',
+      dba_name: vendor.dba_name || '',
+      risk_tier: vendor.risk_tier || 'Medium',
+      category: vendor.category || '',
+      website: vendor.website || '',
+      primary_contact_name: vendor.primary_contact_name || '',
+      primary_contact_email: vendor.primary_contact_email || '',
+      primary_contact_phone: vendor.primary_contact_phone || ''
+    };
+    error.value = null;
+  } catch (err: any) {
+    error.value = err.response?.data?.error || err.message || 'Failed to load vendor';
+  }
+});
 </script>
 
 <style scoped>
