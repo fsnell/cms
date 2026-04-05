@@ -12,7 +12,7 @@ Web-based contract management system for a Vendor Management Office (VMO). Track
 ## Prerequisites
 
 - Node.js 20+ (managed via nvm — `.nvmrc` included)
-- Docker (optional, for containerized deployment)
+- [LocalStack](https://localstack.cloud) running locally on port 4566 with an S3 bucket named `cms-contracts`
 
 ## Quick Start
 
@@ -37,9 +37,6 @@ make seed           Re-seed the database (deletes existing data)
 make clean          Remove build artifacts and databases
 make reset          Clean, reinstall, and re-seed
 make test           Run backend type-check and frontend build check
-make docker         Build Docker image
-make docker-run     Run Docker container
-make docker-stop    Stop and remove Docker container
 ```
 
 ## OCR Contract Upload
@@ -55,15 +52,10 @@ Upload scanned contracts (PNG, JPEG, WebP, PDF) for AI-powered data extraction. 
 
 OpenAI is also supported — set `OPENAI_API_KEY` in the same `.env` file.
 
-## Docker
+## Local S3 (LocalStack)
 
-```bash
-make docker         # Build image
-make docker-run     # Run (reads backend/.env for API keys)
-make docker-stop    # Stop container
-```
+Uploaded contract files are stored in S3. For local development, ensure [LocalStack](https://localstack.cloud) is running on port 4566 with a bucket named `cms-contracts` before starting the app. `backend/.env` is pre-configured with the LocalStack endpoint and dummy AWS credentials.
 
-The container serves the full app on port 3001. Database and uploads are persisted in Docker volumes.
 
 ## Dev Auth
 

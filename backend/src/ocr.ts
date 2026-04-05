@@ -1,6 +1,6 @@
 import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
+import { uploadToS3 } from './s3';
 
 const EXTRACTION_SPEC = {
   contract: {
@@ -162,10 +162,9 @@ async function callAnthropic(base64: string, mimeType: string, prompt: string, i
   return JSON.parse(jsonMatch[0]);
 }
 
-export function saveUploadedFile(file: Express.Multer.File, contractId: string): string {
-  const dir = path.join(__dirname, '..', 'uploads', 'contracts', contractId);
-  fs.mkdirSync(dir, { recursive: true });
-  const dest = path.join(dir, file.originalname);
-  fs.renameSync(file.path, dest);
-  return dest;
+export async function saveUploadedFile(file: Express.Multer.File, contractId: string): Promise<string> {
+  const s3Key = `contracts/${contractId}/${file.originalname}`;
+  await uploadToS3(file.path, s3Key, file.mimetype);
+  fs.unlinkSync(file.path);
+  return s3Key;
 }

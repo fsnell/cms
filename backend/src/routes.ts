@@ -3,6 +3,7 @@ import multer from 'multer';
 import * as repo from './repositories';
 import { authenticate, requireWriter, requireAdmin } from './auth';
 import { getExtractionSpec, getConfiguredProviders, extractContractData, saveUploadedFile, computeChecksum } from './ocr';
+import { generatePresignedUrl } from './s3';
 import { getDb } from './database';
 import fs from 'fs';
 
@@ -262,6 +263,13 @@ router.get('/contracts/:id/documents', (req: Request, res: Response) => {
   res.json(repo.listDocuments(req.params.id));
 });
 
+router.get('/contracts/:id/documents/:docId/url', async (req: Request, res: Response) => {
+  const doc = repo.getDocument(req.params.docId);
+  if (!doc || doc.contract_id !== req.params.id) { res.status(404).json({ error: 'Document not found' }); return; }
+  const url = await generatePresignedUrl(doc.storage_pointer);
+  res.json({ url });
+});
+
 // ---- OCR Upload ----
 router.post('/contracts/upload', requireWriter, upload.single('file'), async (req: Request, res: Response) => {
   try {
@@ -324,13 +332,13 @@ router.post('/contracts/upload', requireWriter, upload.single('file'), async (re
     }, req.user!.id);
 
     // Save file and create document metadata
-    const storagePath = saveUploadedFile(req.file, contract.id);
-    const checksum = computeChecksum(storagePath);
+    const checksum = computeChecksum(req.file.path);
+    const s3Key = await saveUploadedFile(req.file, contract.id);
     const doc = repo.createDocumentMetadata({
       contract_id: contract.id,
       file_name: req.file.originalname,
       file_type: req.file.mimetype,
-      storage_pointer: storagePath,
+      storage_pointer: s3Key,
       uploaded_by: req.user!.id,
       checksum,
       file_size: req.file.size,

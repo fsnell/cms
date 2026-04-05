@@ -37,16 +37,3 @@ test: ## Run backend type-check and frontend build check
 	$(NVM_USE) && cd backend && npx tsc --noEmit
 	$(NVM_USE) && cd frontend && npx vue-tsc --noEmit
 
-docker: ## Build Docker image
-	docker build -t contract-management .
-
-docker-run: ## Run Docker container (pass ANTHROPIC_API_KEY)
-	docker run -d --name contract-mgmt \
-		-p 3001:3001 \
-		-v contract-mgmt-data:/app/data \
-		-v contract-mgmt-uploads:/app/backend/uploads \
-		--env-file backend/.env \
-		contract-management
-
-docker-stop: ## Stop and remove Docker container
-	docker stop contract-mgmt && docker rm contract-mgmt

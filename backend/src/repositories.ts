@@ -366,6 +366,10 @@ export function listDocuments(contractId: string): DocumentMetadata[] {
   return getDb().prepare('SELECT * FROM document_metadata WHERE contract_id = ? ORDER BY uploaded_at DESC').all(contractId) as DocumentMetadata[];
 }
 
+export function getDocument(id: string): DocumentMetadata | undefined {
+  return getDb().prepare('SELECT * FROM document_metadata WHERE id = ?').get(id) as DocumentMetadata | undefined;
+}
+
 // ---- Dashboard ----
 export function getDashboardSummary() {
   const db = getDb();
