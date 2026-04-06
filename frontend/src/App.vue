@@ -15,10 +15,10 @@ function setRole(role: string) {
 
 const navItems = [
   { title: 'Dashboard', icon: 'mdi-view-dashboard', to: '/' },
+  { title: 'Upload Contract', icon: 'mdi-cloud-upload', to: '/contracts/upload' },
   { title: 'Contracts', icon: 'mdi-file-document-multiple', to: '/contracts' },
   { title: 'Vendors', icon: 'mdi-domain', to: '/vendors' },
   { title: 'Reminders', icon: 'mdi-bell-ring', to: '/reminders' },
-  { title: 'Upload Contract', icon: 'mdi-cloud-upload', to: '/contracts/upload' },
   { title: 'Activity Log', icon: 'mdi-history', to: '/activity' },
   { title: 'Archive', icon: 'mdi-archive', to: '/archive' },
   { title: 'Admin', icon: 'mdi-cog', to: '/admin' },

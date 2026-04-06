@@ -65,6 +65,7 @@ export const activityApi = {
 // ---- Documents ----
 export const documentApi = {
   listForContract: (contractId: string) => api.get(`/contracts/${contractId}/documents`),
+  getUrl: (contractId: string, docId: string) => api.get(`/contracts/${contractId}/documents/${docId}/url`),
 };
 
 // ---- Users ----

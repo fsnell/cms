@@ -69,6 +69,11 @@ function formatCurrency(value: number, currency: string) {
 }
 
 function bool(val: any) { return val ? 'Yes' : 'No'; }
+
+async function openDocument(doc: any) {
+  const { data } = await documentApi.getUrl(id, doc.id);
+  window.open(data.url, '_blank');
+}
 </script>
 
 <template>
@@ -192,6 +197,9 @@ function bool(val: any) { return val ? 'Yes' : 'No'; }
               <v-list-item v-for="d in documents" :key="d.id" :subtitle="`${d.file_type} — ${new Date(d.uploaded_at).toLocaleDateString()}`">
                 <template #prepend><v-icon size="small">mdi-file-document</v-icon></template>
                 <v-list-item-title>{{ d.file_name }}</v-list-item-title>
+                <template #append>
+                  <v-btn size="x-small" variant="text" icon="mdi-open-in-new" @click="openDocument(d)" />
+                </template>
               </v-list-item>
             </v-list>
             <div v-else class="text-body-2 text-medium-emphasis">No documents</div>
