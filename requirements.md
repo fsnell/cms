@@ -126,11 +126,17 @@ This phase delivers an MVP focused on contract intake, tracking, reminders, and 
 - Extracted values are normalized: dates to YYYY-MM-DD, booleans to true/false, risk tier to Low/Medium/High, status to the controlled enum, currency amounts cleaned of formatting.
 - Vendor resolution: the extracted vendor legal name is matched (case-insensitive) against existing vendors. If no match, a new Active vendor is created automatically with all extracted profile fields.
 - Parent contract resolution: if the OCR output includes a parent contract reference, the system attempts to resolve it by id, external reference id, or exact title match.
-- On successful extraction: a contract record, document metadata row, and optionally a new vendor are created in a single request.
-- The uploaded file is saved to disk under `uploads/contracts/{contractId}/` with a SHA-256 checksum stored in document metadata.
-- The response includes the created contract, vendor, document metadata, raw extracted JSON, provider used, and relation resolution results.
-- If the OCR output fails contract validation (e.g., missing required fields), a 422 response is returned with the extracted data and validation errors so the user can see what was extracted.
-- The upload page displays: file input, provider selector, the expected JSON spec, and after submission shows created records, links to the contract and vendor, and the raw extracted JSON.
+- OCR upload uses a two-step review flow:
+  1. **Extract step (`POST /api/contracts/upload/extract`)**: runs OCR, stages the uploaded file in S3 under a temporary `contracts/staging/{uuid}/` key, runs duplicate detection, and returns the extracted contract and vendor fields, possible duplicates, and a parent contract resolution suggestion. No database records are created in this step.
+  2. **Finalize step (`POST /api/contracts/upload/finalize`)**: accepts the user-reviewed (and possibly edited) contract and vendor data along with the staging key, validates required fields and date logic, creates or links the vendor, creates the contract, and creates the document metadata row pointing to the staged S3 object.
+- After extraction, the upload page displays the extracted fields in an editable form (the same field set as the contract create/edit screen) so the user can correct any OCR errors before saving.
+- Duplicate detection: the extract step searches for existing non-archived contracts that share the same vendor (matched by case-insensitive legal name) **and** either the same title (case-insensitive) or the same external reference id. Matches are returned to the client as a warning list with each match's id, title, dates, status, and reason.
+- The review screen surfaces possible duplicates as a prominent warning above the form with links to each matching contract. The user must explicitly acknowledge the duplicates via a checkbox before the finalize step is allowed to proceed.
+- The finalize endpoint re-runs duplicate detection server-side and returns 409 Conflict with the duplicate list if duplicates exist and `acknowledged_duplicates` is not set on the request.
+- Vendor resolution at finalize: if the user selected an existing vendor in the form, that vendor id is used; otherwise the extracted/edited legal name is matched (case-insensitive) against existing vendors, and a new Active vendor is created if no match is found.
+- Files uploaded via the OCR flow are stored in S3 (or S3-compatible storage). The S3 key from the staging step is reused as the final document storage pointer; no object copy is required.
+- The legacy single-shot endpoint `POST /api/contracts/upload` (extract + create in one request) is retained for backward compatibility but is no longer the primary user-facing flow.
+- If the OCR output fails contract validation in the legacy endpoint (e.g., missing required fields), a 422 response is returned with the extracted data and validation errors so the user can see what was extracted.
 - Upload requires Writer role (Admin or Contract Manager).
 - Navigation: the upload page is accessible from the sidebar and from an "Upload Contract" button on the contract list page.
 
@@ -330,8 +336,9 @@ Optional fields:
 10. Contract edit page loads and hydrates existing contract data.
 11. Vendor detail page displays all stored vendor profile fields.
 12. Vendor edit page loads and hydrates existing vendor data.
-13. Uploading a contract image or PDF via the upload form extracts structured data and creates the contract, vendor (if new), and document metadata.
+13. Uploading a contract image or PDF via the upload form extracts structured data, presents it in an editable review form, and only creates the contract, vendor (if new), and document metadata after the user confirms.
 14. OCR upload resolves parent contract references when the extracted data includes a matching id, external reference, or title.
+16. When the OCR extract step finds existing non-archived contracts with the same vendor and the same title (or external reference id), the review screen displays a duplicate-warning panel listing each match. The user cannot save until they explicitly acknowledge the warning, and the finalize endpoint rejects the request with 409 if acknowledgement is missing.
 15. Admin can restore an archived contract. Non-admins cannot.
 
 ## 9. Technical Delivery Approach
@@ -359,7 +366,9 @@ Optional fields:
   - `POST /api/contracts/:id/archive` — archives a contract (Writer role)
   - `POST /api/contracts/:id/restore` — restores an archived contract (Admin only)
   - `GET /api/contracts/upload/spec` — returns the OCR JSON extraction spec and configured providers (Writer role)
-  - `POST /api/contracts/upload` — multipart file upload with OCR extraction, contract+vendor+document creation (Writer role)
+  - `POST /api/contracts/upload/extract` — multipart file upload that runs OCR, stages the file in S3, runs duplicate detection, and returns extracted fields for user review (Writer role). Does not create any database records.
+  - `POST /api/contracts/upload/finalize` — JSON endpoint that accepts user-reviewed contract/vendor data plus the staging key from the extract step and creates the contract, vendor (if new), and document metadata. Returns 409 Conflict with a duplicate list if matching contracts exist and `acknowledged_duplicates` is not set (Writer role).
+  - `POST /api/contracts/upload` — legacy single-shot multipart upload that extracts and creates in one request, retained for backward compatibility (Writer role)
   - `GET/POST /api/contracts/:id/reminders`
   - `PATCH /api/reminders/:id`
   - `GET /api/dashboard/summary`

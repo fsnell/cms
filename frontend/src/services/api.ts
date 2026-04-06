@@ -42,6 +42,8 @@ export const contractApi = {
   exportCsv: (params?: any) => api.get('/contracts/export.csv', { params, responseType: 'blob' }),
   uploadSpec: () => api.get('/contracts/upload/spec'),
   upload: (formData: FormData) => api.post('/contracts/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  uploadExtract: (formData: FormData) => api.post('/contracts/upload/extract', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  uploadFinalize: (data: any) => api.post('/contracts/upload/finalize', data),
 };
 
 // ---- Reminders ----
