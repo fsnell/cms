@@ -12,7 +12,7 @@ function getS3Client(): S3Client {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test',
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test',
       },
-      forcePathStyle: true,
+      forcePathStyle: process.env.S3_FORCE_PATH_STYLE !== 'false',
     });
   }
   return new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
@@ -22,12 +22,29 @@ const BUCKET = () => process.env.S3_BUCKET_NAME!;
 
 export async function uploadToS3(localPath: string, s3Key: string, mimeType: string): Promise<string> {
   const body = fs.readFileSync(localPath);
-  await getS3Client().send(new PutObjectCommand({
-    Bucket: BUCKET(),
-    Key: s3Key,
-    Body: body,
-    ContentType: mimeType,
-  }));
+  const bucket = BUCKET();
+  try {
+    await getS3Client().send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: s3Key,
+      Body: body,
+      ContentType: mimeType,
+    }));
+  } catch (err: any) {
+    console.error('[S3:upload] Failed to upload object', {
+      bucket,
+      key: s3Key,
+      mimeType,
+      region: process.env.AWS_REGION,
+      endpoint: process.env.S3_ENDPOINT_URL,
+      name: err?.name,
+      code: err?.Code || err?.code,
+      statusCode: err?.$metadata?.httpStatusCode,
+      requestId: err?.$metadata?.requestId,
+      message: err?.message,
+    });
+    throw err;
+  }
   return s3Key;
 }
 
